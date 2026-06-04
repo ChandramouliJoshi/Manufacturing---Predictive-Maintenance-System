@@ -1,20 +1,55 @@
-# Dataset
-data/
+# =========================
+# Dataset Files
+# =========================
+data/raw/*.csv
+data/processed/*.csv
 
-# Notebook checkpoints
-.ipynb_checkpoints/
+# Keep folder structure
+!data/raw/.gitkeep
+!data/processed/.gitkeep
 
-# Python cache
+# =========================
+# Python Cache
+# =========================
 __pycache__/
 *.pyc
+*.pyo
 
-# Virtual environments
+# =========================
+# Jupyter Notebook Cache
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# Virtual Environments
+# =========================
+proj/
 .venv/
 venv/
+env/
 
-# Model outputs / generated artifacts
-outputs/
+# =========================
+# Trained Models
+# =========================
+models/*.pkl
 
-# OS files
+# =========================
+# Generated Outputs
+# =========================
+outputs/*
+
+# Keep folder structure
+!outputs/plots/.gitkeep
+!outputs/reports/.gitkeep
+
+# =========================
+# OS / Editor Files
+# =========================
 .DS_Store
 Thumbs.db
+.vscode/
+
+# =========================
+# Logs
+# =========================
+*.log
