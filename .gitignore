@@ -32,6 +32,7 @@ env/
 # Trained Models
 # =========================
 models/*.pkl
+models/*.joblib
 
 # =========================
 # Generated Outputs
