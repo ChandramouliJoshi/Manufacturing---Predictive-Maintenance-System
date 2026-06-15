@@ -72,6 +72,32 @@ label {
   font-weight: 600;
 }
 
+.input-row {
+  margin-bottom: 1rem;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.input-row input {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(15, 23, 42, 0.95);
+  color: #e2e8f0;
+  padding: 0.9rem 1rem;
+  font-size: 0.95rem;
+}
+
+.field-name {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
 textarea {
   width: 100%;
   min-height: 220px;

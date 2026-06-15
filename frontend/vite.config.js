@@ -5,5 +5,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    open: true,
+    proxy: {
+      '/predict': 'http://localhost:8000',
+      '/health': 'http://localhost:8000',
+    },
   },
 })

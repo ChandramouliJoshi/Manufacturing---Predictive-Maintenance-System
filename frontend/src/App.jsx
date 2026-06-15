@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-const defaultPayload = {
+const defaultValues = {
   air_temperature_k: 305.0,
   process_temperature_k: 310.0,
   rotational_speed_rpm: 1500.0,
@@ -8,11 +8,26 @@ const defaultPayload = {
   tool_wear_min: 100.0,
 }
 
+const featureDescriptions = {
+  air_temperature_k: 'Air Temperature (Kelvin)',
+  process_temperature_k: 'Process Temperature (Kelvin)',
+  rotational_speed_rpm: 'Rotational Speed (RPM)',
+  torque_nm: 'Torque (Newton-meters)',
+  tool_wear_min: 'Tool Wear (minutes)',
+}
+
 function App() {
-  const [payload, setPayload] = useState(JSON.stringify(defaultPayload, null, 2))
+  const [features, setFeatures] = useState(defaultValues)
   const [response, setResponse] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+
+  const handleChange = (key, value) => {
+    setFeatures((current) => ({
+      ...current,
+      [key]: Number(value),
+    }))
+  }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -21,13 +36,12 @@ function App() {
     setResponse(null)
 
     try {
-      const parsed = JSON.parse(payload)
-      const res = await fetch('http://localhost:8000/predict', {
+      const res = await fetch('/predict', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ features: parsed }),
+        body: JSON.stringify({ features }),
       })
       const data = await res.json()
 
@@ -59,14 +73,24 @@ function App() {
       <main>
         <section className="card">
           <h2>Predict Failure Probability</h2>
-          <p>Send engineered sensor features to the API and receive a failure probability response.</p>
+          <p>Enter each raw sensor reading below and click the button to get a failure prediction.</p>
           <form onSubmit={handleSubmit}>
-            <label htmlFor="feature-json">Feature payload (JSON)</label>
-            <textarea
-              id="feature-json"
-              value={payload}
-              onChange={(event) => setPayload(event.target.value)}
-            />
+            {Object.entries(features).map(([name, value]) => (
+              <div className="input-row" key={name}>
+                <label htmlFor={name}>{featureDescriptions[name] || name}</label>
+                <div className="input-wrapper">
+                  <input
+                    id={name}
+                    type="number"
+                    value={value}
+                    step="any"
+                    onChange={(event) => handleChange(name, event.target.value)}
+                  />
+                  <span className="field-name">{name}</span>
+                </div>
+              </div>
+            ))}
+
             <div className="button-row">
               <button type="submit" disabled={loading}>
                 {loading ? 'Predicting…' : 'Run Prediction'}
@@ -88,7 +112,8 @@ function App() {
           <ul>
             <li>Frontend built with React and Vite.</li>
             <li>API host should be running at <strong>http://localhost:8000</strong>.</li>
-            <li>Payload must contain engineered feature values for the model.</li>
+            <li>Enter raw sensor values directly in the input fields.</li>
+            <li>The backend will engineer features automatically before prediction.</li>
           </ul>
         </section>
       </main>

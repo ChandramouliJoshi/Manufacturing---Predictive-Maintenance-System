@@ -29,27 +29,37 @@ st.info(
 MODEL_PATH = Path("models/production_failure_model.joblib")
 SHAP_ARTIFACT = Path("models/shap_background.joblib")
 SHAP_VALUES_ARTIFACT = Path("models/shap_values.joblib")
+SHAP_SAMPLE_CSV = Path("models/shap_sample.csv")
 
 
 @st.cache_resource
 def load_model(path: Path):
 	if not path.exists():
-		return None
-	return joblib.load(path)
+		return None, f"Missing model: {path}"
+	try:
+		return joblib.load(path), None
+	except Exception as exc:
+		return None, f"Model load failed: {exc}"
 
 
 @st.cache_data
 def load_shap_artifacts(path: Path):
 	if not path.exists():
-		return None
-	return joblib.load(path)
+		return None, f"Missing SHAP artifacts: {path}"
+	try:
+		return joblib.load(path), None
+	except Exception as exc:
+		return None, f"SHAP artifact load failed: {exc}"
 
 
 @st.cache_data
 def load_shap_values(path: Path):
 	if not path.exists():
-		return None
-	return joblib.load(path)
+		return None, None
+	try:
+		return joblib.load(path), None
+	except Exception as exc:
+		return None, f"Saved SHAP values load failed: {exc}"
 
 
 def save_shap_values_artifact(shap_values, output_path: Path):
@@ -65,26 +75,36 @@ def save_shap_values_artifact(shap_values, output_path: Path):
 	return output_path
 
 
-model = load_model(MODEL_PATH)
-artifacts = load_shap_artifacts(SHAP_ARTIFACT)
+model, model_error = load_model(MODEL_PATH)
+artifacts, artifact_error = load_shap_artifacts(SHAP_ARTIFACT)
 
 if model is None:
-	st.error("Missing model: models/production_failure_model.joblib — run training first.")
+	st.error(f"{model_error} — run training first.")
 	st.stop()
 
 if artifacts is None:
-	st.error("Missing SHAP artifacts: models/shap_background.joblib — run src/explainability.py")
-	st.stop()
+	st.warning(f"{artifact_error}. Falling back to models/shap_sample.csv.")
 
-background = artifacts.get("background")
-sample_df = artifacts.get("sample")
-feature_cols = artifacts.get("feature_columns")
+background = artifacts.get("background") if artifacts else None
+sample_df = artifacts.get("sample") if artifacts else None
+feature_cols = artifacts.get("feature_columns") if artifacts else None
+
+if sample_df is None and SHAP_SAMPLE_CSV.exists():
+	sample_df = pd.read_csv(SHAP_SAMPLE_CSV)
+
+if feature_cols is None and hasattr(model.named_steps.get("imputer"), "feature_names_in_"):
+	feature_cols = list(model.named_steps["imputer"].feature_names_in_)
+
+if background is None and sample_df is not None and feature_cols is not None:
+	background = sample_df[feature_cols].head(min(50, len(sample_df)))
 
 if background is None or sample_df is None or feature_cols is None:
-	st.error("SHAP artifacts are incomplete. Expected keys: background, sample, feature_columns.")
+	st.error("Dashboard inputs are incomplete. Regenerate SHAP artifacts with `python src/explainability.py`.")
 	st.stop()
 
-saved_shap_artifact = load_shap_values(SHAP_VALUES_ARTIFACT)
+saved_shap_artifact, saved_shap_error = load_shap_values(SHAP_VALUES_ARTIFACT)
+if saved_shap_error:
+	st.warning(saved_shap_error)
 saved_shap_values = None
 if saved_shap_artifact is not None:
 	saved_shap_values = saved_shap_artifact.get("shap_explanation")

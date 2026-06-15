@@ -34,24 +34,96 @@ def load_raw_data(path: Path) -> pd.DataFrame:
 
 
 def create_time_series_features(df: pd.DataFrame, config: FeatureConfig) -> pd.DataFrame:
+    """Create exactly the 79 features expected by the trained model."""
     engineered = df.copy()
+    
+    # Add 'type' column first (required by model - column 1)
+    if 'type' not in engineered.columns:
+        engineered.insert(0, 'type', 0)
+    
+    # Ensure all sensor columns present (columns 2-6)
     available_sensors = [col for col in SENSOR_COLUMNS if col in engineered.columns]
-
-    for column in available_sensors:
+    
+    # Sensor short-name map
+    sensor_map = {
+        "air_temperature_k": "temp",
+        "process_temperature_k": "process_temp",
+        "rotational_speed_rpm": "rpm",
+        "torque_nm": "torque",
+        "tool_wear_min": "tool_wear",
+    }
+    
+    # Pre-compute rolling windows (span=1, 6, 12 hours)
+    rolling_data = {}
+    for col in available_sensors:
+        rolling_data[col] = {}
         for window in config.rolling_windows:
-            rolling = engineered[column].rolling(window=window, min_periods=1)
-            engineered[f"{column}_roll_mean_{window}h"] = rolling.mean()
-            engineered[f"{column}_roll_std_{window}h"] = rolling.std().fillna(0)
-            engineered[f"{column}_ema_{window}h"] = (
-                engineered[column].ewm(span=window, adjust=False).mean()
-            )
-
+            rolling = engineered[col].rolling(window=window, min_periods=1)
+            rolling_data[col][window] = {
+                'mean': rolling.mean(),
+                'std': rolling.std().fillna(0),
+                'ema': engineered[col].ewm(span=window, adjust=False).mean()
+            }
+    
+    # Short-name features (columns 7-19, specific selection matching training data)
+    # These were hand-selected during original training
+    engineered["temp_roll_mean_6"] = rolling_data["air_temperature_k"][6]["mean"]
+    engineered["temp_roll_mean_12"] = rolling_data["air_temperature_k"][12]["mean"]
+    engineered["torque_std_6"] = rolling_data["torque_nm"][6]["std"]
+    engineered["rpm_std_6"] = rolling_data["rotational_speed_rpm"][6]["std"]
+    engineered["temp_ema_6"] = rolling_data["air_temperature_k"][6]["ema"]
+    engineered["torque_ema_6"] = rolling_data["torque_nm"][6]["ema"]
+    engineered["temp_lag1"] = engineered["air_temperature_k"].shift(1)
+    engineered["temp_lag2"] = engineered["air_temperature_k"].shift(2)
+    engineered["torque_lag1"] = engineered["torque_nm"].shift(1)
+    engineered["temp_delta"] = engineered["air_temperature_k"].diff()
+    engineered["torque_delta"] = engineered["torque_nm"].diff()
+    engineered["rpm_change"] = engineered["rotational_speed_rpm"].diff()
+    engineered["torque_change"] = engineered["torque_nm"].diff()
+    
+    # Full-name features (columns 20-79, systematic across all 5 sensors)
+    for col in available_sensors:
+        for window in config.rolling_windows:
+            engineered[f"{col}_roll_mean_{window}h"] = rolling_data[col][window]["mean"]
+            engineered[f"{col}_roll_std_{window}h"] = rolling_data[col][window]["std"]
+            engineered[f"{col}_ema_{window}h"] = rolling_data[col][window]["ema"]
+        
+        # Lags
         for lag in config.lag_steps:
-            engineered[f"{column}_lag_t{lag}"] = engineered[column].shift(lag)
-
-        engineered[f"{column}_delta_1h"] = engineered[column].diff()
-
+            engineered[f"{col}_lag_t{lag}"] = engineered[col].shift(lag)
+        
+        # Delta
+        engineered[f"{col}_delta_1h"] = engineered[col].diff()
+    
+    # Fill NaN values from rolling/diff operations
     engineered = engineered.bfill().ffill()
+    
+    # Reorder columns to exact training order: type + sensors + short-names + full-names
+    # First 6 columns: type, air_temperature_k, process_temperature_k, rotational_speed_rpm, torque_nm, tool_wear_min
+    base_cols = ["type"] + available_sensors
+    
+    # Short-name features (columns 7-19)
+    short_feature_cols = [
+        "temp_roll_mean_6", "temp_roll_mean_12", "torque_std_6", "rpm_std_6",
+        "temp_ema_6", "torque_ema_6", "temp_lag1", "temp_lag2", "torque_lag1",
+        "temp_delta", "torque_delta", "rpm_change", "torque_change"
+    ]
+    
+    # Full-name features (columns 20-79)
+    full_feature_cols = []
+    for col in available_sensors:
+        for window in [1, 6, 12]:  # Order matters: 1h, 6h, 12h
+            full_feature_cols.append(f"{col}_roll_mean_{window}h")
+            full_feature_cols.append(f"{col}_roll_std_{window}h")
+            full_feature_cols.append(f"{col}_ema_{window}h")
+        for lag in [1, 2]:
+            full_feature_cols.append(f"{col}_lag_t{lag}")
+        full_feature_cols.append(f"{col}_delta_1h")
+    
+    # Combine in exact order
+    final_cols = base_cols + short_feature_cols + full_feature_cols
+    engineered = engineered[final_cols]
+    
     return engineered
 
 
