@@ -80,29 +80,35 @@ show_saved_shap = st.sidebar.checkbox("Load saved SHAP values", value=saved_shap
 st.header("Sample Input")
 st.dataframe(sample_df.head(sample_count))
 
-if show_saved_shap and saved_shap_values is not None:
-	st.subheader("Precomputed SHAP — selected sample")	
-	try:
-		fig1 = plt.figure(figsize=(8, 5))
-		shap.plots.waterfall(saved_shap_values[selected_index], show=False)
-		st.pyplot(fig1)
+if show_saved_shap:
+	if saved_shap_values is None:
+		st.warning("No precomputed SHAP values found. Use the CLI to generate `models/shap_values.joblib` or disable this option.")	
+	else:
+		st.subheader("Precomputed SHAP — selected sample")
+		try:
+			fig1 = plt.figure(figsize=(8, 5))
+			shap.plots.waterfall(saved_shap_values[selected_index], show=False)
+			st.pyplot(fig1)
 
-		st.subheader("Precomputed SHAP summary")
-		fig2 = plt.figure(figsize=(8, 6))
-		shap.plots.bar(saved_shap_values, max_display=20)
-		st.pyplot(fig2)
+			st.subheader("Precomputed SHAP summary")
+			fig2 = plt.figure(figsize=(8, 6))
+			shap.plots.bar(saved_shap_values, max_display=20)
+			st.pyplot(fig2)
 
-		st.subheader("Saved feature impact table")
-		feature_impacts = pd.DataFrame(
-			{
-				"feature": feature_cols,
-				"mean_abs_shap": np.abs(saved_shap_values.values).mean(axis=0),
-			}
-		)
-		st.dataframe(feature_impacts.sort_values(by="mean_abs_shap", ascending=False).head(20))
-	except Exception as exc:
-		st.error(f"Saved SHAP display failed: {exc}")
+			st.subheader("Saved feature impact table")
+			feature_impacts = pd.DataFrame(
+				{
+					"feature": feature_cols,
+					"mean_abs_shap": np.abs(saved_shap_values.values).mean(axis=0),
+				}
+			)
+			st.dataframe(feature_impacts.sort_values(by="mean_abs_shap", ascending=False).head(20))
+		except Exception as exc:
+			st.error(f"Saved SHAP display failed: {exc}")
 
+if st.button("Compute SHAP for selected sample"):
+	if not SHAP_AVAILABLE:
+		st.error("SHAP package is not available. Install shap in your environment.")
 	else:
 		with st.spinner("Computing SHAP values (may take a few seconds)..."):
 			try:
@@ -141,4 +147,3 @@ except Exception:
 
 st.markdown("---")
 st.caption("Run: `streamlit run dashboard/streamlit_app.py`")
-
