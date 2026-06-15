@@ -1,6 +1,7 @@
 import streamlit as st
 from pathlib import Path
 import joblib
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -71,7 +72,6 @@ if st.button("Compute SHAP for selected sample"):
 	else:
 		with st.spinner("Computing SHAP values (may take a few seconds)..."):
 			try:
-				# Try to build an explainer around the pipeline predict_proba
 				predict_fn = lambda x: model.predict_proba(pd.DataFrame(x, columns=feature_cols))[:, 1]
 				explainer = shap.Explainer(predict_fn, background, feature_names=feature_cols)
 				shap_values = explainer(sample_df)
@@ -85,6 +85,15 @@ if st.button("Compute SHAP for selected sample"):
 				fig2 = plt.figure(figsize=(8, 6))
 				shap.plots.bar(shap_values, max_display=20)
 				st.pyplot(fig2)
+
+				st.subheader("Feature impact table")
+				feature_impacts = pd.DataFrame(
+					{
+						"feature": feature_cols,
+						"mean_abs_shap": np.abs(shap_values.values).mean(axis=0),
+					}
+				)
+				st.dataframe(feature_impacts.sort_values(by="mean_abs_shap", ascending=False).head(20))
 
 			except Exception as exc:
 				st.error(f"SHAP computation failed: {exc}")
