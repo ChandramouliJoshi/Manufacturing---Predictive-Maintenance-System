@@ -22,9 +22,6 @@ st.markdown(
 	"""
 )
 
-st.info(
-	"Use the sidebar to load saved SHAP explanations or compute new values on demand. Run `streamlit run dashboard/streamlit_app.py` to launch the UI."
-)
 
 MODEL_PATH = Path("models/production_failure_model.joblib")
 SHAP_ARTIFACT = Path("models/shap_background.joblib")
