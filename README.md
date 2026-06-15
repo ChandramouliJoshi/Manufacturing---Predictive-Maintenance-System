@@ -1,4 +1,10 @@
-# Manufacturing Predictive Maintenance System
+# FactoryGuard AI — IoT Predictive Maintenance Engine
+
+**Project Title:** IoT Predictive Maintenance Engine (Time-Series Classification)
+
+**Product Brand Name:** FactoryGuard AI
+
+**Use Case (Production):** A critical manufacturing plant floor contains 500 robotic arms with vibration, temperature, and pressure sensors. The objective is to predict a catastrophic failure 24 hours before it occurs and allow for scheduled, preemptive maintenance, avoiding millions in unscheduled downtime.
 
 This project follows the feature-engineering and modeling plan from the
 requirements image:
@@ -63,6 +69,16 @@ python main.py explain --compute-shap --save-shap-csv --shap-out models --shap-p
 ```
 
 The explainability artifacts are stored in `models/shap_background.joblib`, `models/shap_sample.csv`, and `models/shap_values.joblib`, while plot images are written to the configured `outputs/plots` directory.
+
+## Frontend and API
+
+- React dashboard: `cd frontend && npm install && npm run dev`
+- Legacy Streamlit dashboard: `streamlit run dashboard/streamlit_app.py`
+- API: `uvicorn api.app:app --reload --port 8000`
+
+The API exposes a `/predict` endpoint for engineered feature payloads and returns a failure probability.
+
+The modern frontend is implemented with React + Vite and styled with CSS for a production-ready UI.
 
 LightGBM is available for a second production-grade option:
 

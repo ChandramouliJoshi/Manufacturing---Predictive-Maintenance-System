@@ -12,9 +12,19 @@ except Exception:
 	SHAP_AVAILABLE = False
 
 
-st.set_page_config(page_title="SHAP Explainability", layout="wide")
+st.set_page_config(page_title="FactoryGuard AI — Predictive Maintenance", layout="wide")
 
-st.title("Model Explainability — SHAP")
+st.title("FactoryGuard AI — IoT Predictive Maintenance Engine")
+st.markdown(
+	"""
+	FactoryGuard AI monitors robotic arm vibration, temperature, and pressure to predict critical failures 24 hours before they occur.
+	Use this dashboard to review sample inputs, compute SHAP explanations, and validate model behavior for the factory floor.
+	"""
+)
+
+st.info(
+	"Use the sidebar to load saved SHAP explanations or compute new values on demand. Run `streamlit run dashboard/streamlit_app.py` to launch the UI."
+)
 
 MODEL_PATH = Path("models/production_failure_model.joblib")
 SHAP_ARTIFACT = Path("models/shap_background.joblib")
