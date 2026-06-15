@@ -42,6 +42,22 @@ python main.py --model random_forest
 python main.py --model logistic_regression
 ```
 
+## Explainability (SHAP)
+
+Generate SHAP artifacts from the engineered feature dataset:
+
+```bash
+python main.py explain --shap-out models --background-size 100 --sample-size 20
+```
+
+Compute and save SHAP values plus plot images after training:
+
+```bash
+python main.py explain --compute-shap --shap-out models --shap-plot-out outputs/plots
+```
+
+The explainability artifacts are stored in `models/shap_background.joblib`, `models/shap_sample.csv`, and `models/shap_values.joblib`, while plot images are written to the configured `outputs/plots` directory.
+
 LightGBM is available for a second production-grade option:
 
 ```bash

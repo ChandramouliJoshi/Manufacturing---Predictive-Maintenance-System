@@ -4,18 +4,25 @@ import argparse
 from pathlib import Path
 
 from src.feature_engineering import FeatureConfig, build_features
+from src.explainability import (
+    compute_shap_values,
+    load_model as load_shap_model,
+    plot_shap_values,
+    prepare_shap_inputs,
+    save_shap_values,
+)
 from src.modeling import ModelConfig, train_model
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run feature engineering and imbalance-aware modeling."
+        description="Run feature engineering, imbalance-aware modeling, and SHAP explainability."
     )
     parser.add_argument(
         "stage",
         nargs="?",
         default="all",
-        choices=["features", "train", "all"],
+        choices=["features", "train", "explain", "all"],
         help="Pipeline stage to run.",
     )
     parser.add_argument(
@@ -53,6 +60,39 @@ def parse_args() -> argparse.Namespace:
         "--metrics-out",
         default="outputs/reports/imbalance_model_metrics.json",
         help="Where to save evaluation metrics.",
+    )
+    parser.add_argument(
+        "--shap-out",
+        default="models",
+        help="Where to save SHAP artifacts.",
+    )
+    parser.add_argument(
+        "--shap-plot-out",
+        default="outputs/plots",
+        help="Where to save SHAP plot images.",
+    )
+    parser.add_argument(
+        "--background-size",
+        type=int,
+        default=100,
+        help="Number of background examples for SHAP.",
+    )
+    parser.add_argument(
+        "--sample-size",
+        type=int,
+        default=20,
+        help="Number of sample rows for SHAP analysis.",
+    )
+    parser.add_argument(
+        "--shap-sample-index",
+        type=int,
+        default=0,
+        help="Sample index for waterfall plot when saving SHAP plots.",
+    )
+    parser.add_argument(
+        "--compute-shap",
+        action="store_true",
+        help="Compute SHAP values and save visualizations.",
     )
     parser.add_argument(
         "--min-precision",
@@ -98,6 +138,30 @@ def main() -> None:
         print(f"Precision: {metrics['precision']:.4f}")
         print(f"Recall: {metrics['recall']:.4f}")
         print(f"F1 score: {metrics['f1_score']:.4f}")
+
+    if args.stage in {"explain", "all"}:
+        explain_artifacts = prepare_shap_inputs(
+            Path(args.features_out),
+            Path(args.shap_out),
+            background_size=args.background_size,
+            sample_size=args.sample_size,
+        )
+        print("SHAP explainability artifacts generated")
+        print(f"SHAP artifacts: {Path(args.shap_out) / 'shap_background.joblib'}")
+        print(f"SHAP sample CSV: {Path(args.shap_out) / 'shap_sample.csv'}")
+
+        if args.compute_shap:
+            shap_model = load_shap_model(Path(args.model_out))
+            shap_values = compute_shap_values(
+                shap_model,
+                explain_artifacts["background"],
+                explain_artifacts["sample"],
+                explain_artifacts["feature_columns"],
+            )
+            save_shap_values(shap_values, Path(args.shap_out))
+            plot_shap_values(shap_values, Path(args.shap_plot_out), sample_index=args.shap_sample_index)
+            print(f"Saved SHAP values to {Path(args.shap_out) / 'shap_values.joblib'}")
+            print(f"Saved SHAP plots to {Path(args.shap_plot_out)}")
 
 
 if __name__ == "__main__":

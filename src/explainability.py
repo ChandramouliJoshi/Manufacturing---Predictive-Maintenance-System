@@ -6,6 +6,8 @@ from pathlib import Path
 import argparse
 import joblib
 import pandas as pd
+import matplotlib.pyplot as plt
+import shap
 
 
 LEAKAGE_COLUMNS = {
@@ -84,6 +86,20 @@ def save_shap_values(shap_values, output_dir: Path):
     }
     joblib.dump(artifact, output_dir / "shap_values.joblib")
     print(f"Saved SHAP values to {output_dir / 'shap_values.joblib'}")
+
+
+def plot_shap_values(shap_values, output_dir: Path, sample_index: int = 0):
+    output_dir.mkdir(parents=True, exist_ok=True)
+    fig = plt.figure(figsize=(10, 6))
+    shap.plots.bar(shap_values, max_display=20, show=False)
+    fig.savefig(output_dir / "shap_summary.png", bbox_inches="tight")
+    plt.close(fig)
+
+    if 0 <= sample_index < len(shap_values):
+        fig = plt.figure(figsize=(10, 7))
+        shap.plots.waterfall(shap_values[sample_index], show=False)
+        fig.savefig(output_dir / f"shap_waterfall_sample_{sample_index}.png", bbox_inches="tight")
+        plt.close(fig)
 
 
 def main():
