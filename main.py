@@ -10,6 +10,7 @@ from src.explainability import (
     plot_shap_values,
     prepare_shap_inputs,
     save_shap_values,
+    save_shap_csv,
 )
 from src.modeling import ModelConfig, train_model
 
@@ -95,6 +96,11 @@ def parse_args() -> argparse.Namespace:
         help="Compute SHAP values and save visualizations.",
     )
     parser.add_argument(
+        "--save-shap-csv",
+        action="store_true",
+        help="Save SHAP contributions as a CSV file alongside the model artifacts.",
+    )
+    parser.add_argument(
         "--min-precision",
         type=float,
         default=0.8,
@@ -159,8 +165,12 @@ def main() -> None:
                 explain_artifacts["feature_columns"],
             )
             save_shap_values(shap_values, Path(args.shap_out))
+            if args.save_shap_csv:
+                save_shap_csv(shap_values, explain_artifacts["sample"], Path(args.shap_out))
             plot_shap_values(shap_values, Path(args.shap_plot_out), sample_index=args.shap_sample_index)
             print(f"Saved SHAP values to {Path(args.shap_out) / 'shap_values.joblib'}")
+            if args.save_shap_csv:
+                print(f"Saved SHAP CSV to {Path(args.shap_out) / 'shap_values.csv'}")
             print(f"Saved SHAP plots to {Path(args.shap_plot_out)}")
 
 

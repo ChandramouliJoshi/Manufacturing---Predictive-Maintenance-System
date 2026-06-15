@@ -56,6 +56,12 @@ Compute and save SHAP values plus plot images after training:
 python main.py explain --compute-shap --shap-out models --shap-plot-out outputs/plots
 ```
 
+Optionally export SHAP contributions to CSV:
+
+```bash
+python main.py explain --compute-shap --save-shap-csv --shap-out models --shap-plot-out outputs/plots
+```
+
 The explainability artifacts are stored in `models/shap_background.joblib`, `models/shap_sample.csv`, and `models/shap_values.joblib`, while plot images are written to the configured `outputs/plots` directory.
 
 LightGBM is available for a second production-grade option:

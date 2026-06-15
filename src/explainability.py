@@ -88,6 +88,20 @@ def save_shap_values(shap_values, output_dir: Path):
     print(f"Saved SHAP values to {output_dir / 'shap_values.joblib'}")
 
 
+def save_shap_csv(shap_values, sample_df: pd.DataFrame, output_dir: Path):
+    output_dir.mkdir(parents=True, exist_ok=True)
+    sample_df = sample_df.reset_index(drop=True)
+    shap_df = pd.DataFrame(
+        shap_values.values,
+        columns=[f"shap_{col}" for col in shap_values.feature_names],
+    )
+    combined = pd.concat([sample_df, shap_df], axis=1)
+    csv_path = output_dir / "shap_values.csv"
+    combined.to_csv(csv_path, index=False, encoding="utf-8")
+    print(f"Saved SHAP CSV to {csv_path}")
+    return csv_path
+
+
 def plot_shap_values(shap_values, output_dir: Path, sample_index: int = 0):
     output_dir.mkdir(parents=True, exist_ok=True)
     fig = plt.figure(figsize=(10, 6))

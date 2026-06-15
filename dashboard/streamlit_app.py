@@ -42,6 +42,19 @@ def load_shap_values(path: Path):
 	return joblib.load(path)
 
 
+def save_shap_values_artifact(shap_values, output_path: Path):
+	output_path.parent.mkdir(parents=True, exist_ok=True)
+	artifact = {
+		"shap_explanation": shap_values,
+		"values": shap_values.values,
+		"base_values": shap_values.base_values,
+		"data": shap_values.data,
+		"feature_names": list(shap_values.feature_names),
+	}
+	joblib.dump(artifact, output_path)
+	return output_path
+
+
 model = load_model(MODEL_PATH)
 artifacts = load_shap_artifacts(SHAP_ARTIFACT)
 
@@ -79,6 +92,9 @@ show_saved_shap = st.sidebar.checkbox("Load saved SHAP values", value=saved_shap
 
 st.header("Sample Input")
 st.dataframe(sample_df.head(sample_count))
+
+if "shap_values" not in st.session_state:
+	st.session_state.shap_values = None
 
 if show_saved_shap:
 	if saved_shap_values is None:
@@ -134,9 +150,18 @@ if st.button("Compute SHAP for selected sample"):
 					}
 				)
 				st.dataframe(feature_impacts.sort_values(by="mean_abs_shap", ascending=False).head(20))
+				st.session_state.shap_values = shap_values
 
 			except Exception as exc:
 				st.error(f"SHAP computation failed: {exc}")
+				st.session_state.shap_values = None
+
+if st.button("Save computed SHAP values"):
+	if st.session_state.shap_values is None:
+		st.warning("Compute SHAP values first, then save them.")
+	else:
+		saved_path = save_shap_values_artifact(st.session_state.shap_values, SHAP_VALUES_ARTIFACT)
+		st.success(f"Saved computed SHAP values to {saved_path}")
 
 # quick model sanity check
 try:
