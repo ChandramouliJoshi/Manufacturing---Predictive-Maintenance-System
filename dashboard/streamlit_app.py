@@ -18,6 +18,7 @@ st.title("Model Explainability — SHAP")
 
 MODEL_PATH = Path("models/production_failure_model.joblib")
 SHAP_ARTIFACT = Path("models/shap_background.joblib")
+SHAP_VALUES_ARTIFACT = Path("models/shap_values.joblib")
 
 
 @st.cache_resource
@@ -29,6 +30,13 @@ def load_model(path: Path):
 
 @st.cache_data
 def load_shap_artifacts(path: Path):
+	if not path.exists():
+		return None
+	return joblib.load(path)
+
+
+@st.cache_data
+def load_shap_values(path: Path):
 	if not path.exists():
 		return None
 	return joblib.load(path)
@@ -53,6 +61,11 @@ if background is None or sample_df is None or feature_cols is None:
 	st.error("SHAP artifacts are incomplete. Expected keys: background, sample, feature_columns.")
 	st.stop()
 
+saved_shap_artifact = load_shap_values(SHAP_VALUES_ARTIFACT)
+saved_shap_values = None
+if saved_shap_artifact is not None:
+	saved_shap_values = saved_shap_artifact.get("shap_explanation")
+
 st.sidebar.header("Options")
 max_rows = max(1, min(20, len(sample_df)))
 sample_count = st.sidebar.slider("Show sample rows", 1, max_rows, min(5, max_rows))
@@ -62,13 +75,34 @@ selected_index = st.sidebar.number_input(
 	max_value=max(0, len(sample_df) - 1),
 	value=0,
 )
+show_saved_shap = st.sidebar.checkbox("Load saved SHAP values", value=saved_shap_values is not None)
 
 st.header("Sample Input")
 st.dataframe(sample_df.head(sample_count))
 
-if st.button("Compute SHAP for selected sample"):
-	if not SHAP_AVAILABLE:
-		st.error("SHAP package is not available. Install shap in your environment.")
+if show_saved_shap and saved_shap_values is not None:
+	st.subheader("Precomputed SHAP — selected sample")	
+	try:
+		fig1 = plt.figure(figsize=(8, 5))
+		shap.plots.waterfall(saved_shap_values[selected_index], show=False)
+		st.pyplot(fig1)
+
+		st.subheader("Precomputed SHAP summary")
+		fig2 = plt.figure(figsize=(8, 6))
+		shap.plots.bar(saved_shap_values, max_display=20)
+		st.pyplot(fig2)
+
+		st.subheader("Saved feature impact table")
+		feature_impacts = pd.DataFrame(
+			{
+				"feature": feature_cols,
+				"mean_abs_shap": np.abs(saved_shap_values.values).mean(axis=0),
+			}
+		)
+		st.dataframe(feature_impacts.sort_values(by="mean_abs_shap", ascending=False).head(20))
+	except Exception as exc:
+		st.error(f"Saved SHAP display failed: {exc}")
+
 	else:
 		with st.spinner("Computing SHAP values (may take a few seconds)..."):
 			try:
